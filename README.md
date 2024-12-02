@@ -17,6 +17,8 @@ The solutions have tests, which can be run with `gleam test`.
 
 ## Attribution
 
+[gladvent](https://github.com/TanklesXL/gladvent): A Gleam Advent of Code framework.
+
 [Awesome Gleam](https://github.com/gleam-lang/awesome-gleam): A curated list of Gleam packages and resources.
 
 [Gleam stdlib docs](https://hexdocs.pm/gleam_stdlib/): The docs for the standard library for the Gleam programming language.
