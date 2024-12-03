@@ -27,7 +27,7 @@ pub fn task_1_test() {
       |> duration.format_as(duration.Microsecond, 0)
     }
   }
-  |> io.debug
+  |> io.println_error
 }
 
 pub fn task_2_test() {
@@ -42,5 +42,5 @@ pub fn task_2_test() {
     |> time.difference_abs(time.now_local())
     |> duration.format_as(duration.Microsecond, 0)
   }
-  |> io.debug
+  |> io.println_error
 }
