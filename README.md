@@ -2,7 +2,7 @@
 
 <!-- [![Package Version](https://img.shields.io/hexpm/v/aoc_2024)](https://hex.pm/packages/aoc_2024)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/aoc_2024/) -->
-![Progress](https://img.shields.io/badge/Progress-2%2F25-ffaff3?style=for-the-badge)
+![Progress](https://img.shields.io/badge/Progress-3%2F25-ffaff3?style=for-the-badge)
 ![Language](https://img.shields.io/badge/Language-Gleam_⭐-ffaff3?style=for-the-badge)
 
 My solutions to the Advent of Code 2024 challenges, written in Gleam.
