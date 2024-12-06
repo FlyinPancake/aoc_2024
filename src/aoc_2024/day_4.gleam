@@ -1,8 +1,8 @@
+import gleam/dict
 import gleam/int
 import gleam/io
 import gleam/list
 import gleam/option.{type Option, None, Some}
-import gleam/result
 import gleam/string
 
 pub fn parse(input: String) -> List(String) {
@@ -40,82 +40,35 @@ fn find_vertically(input: List(String)) -> Int {
 }
 
 fn find_diagonally(input: List(String)) -> Int {
-  let #(diag, anti_diag) = get_diagonals(input)
-  let diagonals = list.flatten([diag, anti_diag]) |> list.map(fn(x) { x.1 })
+  let diagonals = get_diagonals(input)
 
   diagonals |> list.filter(fn(s) { string.length(s) > 3 }) |> find_horizontally
 }
 
-pub fn get_diagonals(
-  grid: List(String),
-) -> #(List(#(Int, String)), List(#(Int, String))) {
-  let grid_length = list.length(grid)
-
+pub fn get_diagonals(grid: List(String)) -> List(String) {
   // Main diagonals (top-left to bottom-right)
   let main_diagonals =
-    list.range(0 - grid_length - 1, grid_length - 1)
-    |> list.map(fn(offset) {
-      let diag_content =
-        list.range(0, grid_length - 1)
-        |> list.filter_map(fn(i) {
-          let row = i
-          let col = i + offset
-
-          case col >= 0 && col < grid_length {
-            True -> {
-              let line = list.drop(list.take(grid, row + 1), row)
-              case line {
-                [current_line, ..] -> {
-                  let chars = string.to_graphemes(current_line)
-                  case list.drop(list.take(chars, col + 1), col) {
-                    [char, ..] -> Ok(char)
-                    _ -> Error(Nil)
-                  }
-                }
-                _ -> Error(Nil)
-              }
-            }
-            False -> Error(Nil)
-          }
-        })
-        |> string.join("")
-      #(offset, diag_content)
+    grid
+    |> list.index_map(fn(row, i) {
+      let width = string.length(row)
+      { string.repeat(" ", width - i) <> row <> string.repeat(" ", i) }
+      |> string.to_graphemes
     })
-    |> list.filter(fn(diagonal) { string.length(diagonal.1) > 0 })
+    |> list.transpose
+    |> list.map(fn(x) { x |> string.join(with: "") |> string.trim })
 
   // Anti-diagonals (top-right to bottom-left)
   let anti_diagonals =
-    list.range(0 - grid_length - 1, grid_length - 1)
-    |> list.map(fn(offset) {
-      let diag_contents =
-        list.range(0, grid_length - 1)
-        |> list.filter_map(fn(i) {
-          let row = i
-          let col = grid_length - 1 - i - offset
-
-          case col >= 0 && col < grid_length {
-            True -> {
-              let line = list.drop(list.take(grid, row + 1), row)
-              case line {
-                [current_line, ..] -> {
-                  let chars = string.to_graphemes(current_line)
-                  case list.drop(list.take(chars, col + 1), col) {
-                    [char, ..] -> Ok(char)
-                    _ -> Error(Nil)
-                  }
-                }
-                _ -> Error(Nil)
-              }
-            }
-            False -> Error(Nil)
-          }
-        })
-        |> string.join("")
-      #(offset, diag_contents)
+    grid
+    |> list.index_map(fn(row, i) {
+      let width = string.length(row)
+      { string.repeat(" ", i) <> row <> string.repeat(" ", width - i) }
+      |> string.to_graphemes
     })
-    |> list.filter(fn(diagonal) { string.length(diagonal.1) > 0 })
+    |> list.transpose
+    |> list.map(fn(x) { x |> string.join(with: "") |> string.trim })
 
-  #(main_diagonals, anti_diagonals)
+  list.flatten([main_diagonals, anti_diagonals])
 }
 
 fn find_mas(input: String, start: Int) -> Option(Int) {
@@ -134,31 +87,57 @@ pub fn find_all_mas(input: String, start: Int) -> List(Int) {
   }
 }
 
-fn uw(result: Result(a, _)) -> a {
-  let assert Ok(res) = result
-  res
-}
+// fn uw(result: Result(a, _)) -> a {
+//   let assert Ok(res) = result
+//   res
+// }
 
 pub fn pt_2(input: List(String)) {
-  let #(main_diagonals, anti_diagonals) = get_diagonals(input)
-  let main_mases =
-    main_diagonals
-    |> list.filter_map(fn(s) {
-      case find_all_mas(s.1, 0) {
-        [] -> Error(Nil)
-        all_mas -> Ok(#(all_mas, s.0))
-      }
+  let width = input |> list.length
+  let indexed =
+    input
+    |> list.index_map(fn(x, row) {
+      x
+      |> string.to_graphemes
+      |> list.index_map(fn(c, col) { #(#(row, col), c) })
     })
-    |> list.flat_map(fn(el) {
-      let #(starts, col) = el
-      starts
-      |> list.map(fn(row) {
-        // case col < 0 {
-        //   True -> 
-        // } 
-        #(row, col)
+
+  let indexed_dict = indexed |> list.flatten |> dict.from_list
+
+  let possible_middles =
+    indexed
+    |> list.map(fn(r) {
+      r
+      |> list.filter(fn(x) {
+        let #(#(row, col), c) = x
+        let not_on_edge =
+          row >= 1 && row <= width - 2 && col >= 1 && col <= width - 2
+        c == "A" && not_on_edge
       })
     })
-    |> io.debug
-  todo
+    |> list.flatten
+  possible_middles
+  |> list.filter(fn(mid) {
+    let #(#(row, col), _) = mid
+
+    let top_left = indexed_dict |> dict.get(#(row - 1, col - 1))
+    let top_right = indexed_dict |> dict.get(#(row - 1, col + 1))
+    let bot_left = indexed_dict |> dict.get(#(row + 1, col - 1))
+    let bot_right = indexed_dict |> dict.get(#(row + 1, col + 1))
+
+    let main_diag_ok = case top_left, bot_right {
+      Ok("M"), Ok("S") -> True
+      Ok("S"), Ok("M") -> True
+      _, _ -> False
+    }
+
+    let anti_diag_ok = case top_right, bot_left {
+      Ok("M"), Ok("S") -> True
+      Ok("S"), Ok("M") -> True
+      _, _ -> False
+    }
+
+    main_diag_ok && anti_diag_ok
+  })
+  |> list.length
 }

@@ -19,6 +19,7 @@ birl = ">= 1.7.1 and < 2.0.0"
 gtempo = ">= 5.0.2 and < 6.0.0"
 gladvent = ">= 2.0.2 and < 3.0.0"
 gleam_regexp = ">= 1.0.0 and < 2.0.0"
+parallel_map = ">= 2.1.0 and < 3.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
@@ -33,4 +34,6 @@ allow_all = true
 1 = { pt_1 = 1197984, pt_2 = 23387399 }
 2 = { pt_1 = 371, pt_2 = 426 }
 3 = { pt_1 = 174561379, pt_2 = 106921067 }
-4 = { pt_1 = 2545 }
+4 = { pt_1 = 2545, pt_2 = 1886 }
+5 = { pt_1 = 4905, pt_2 = 6204 }
+6 = { pt_1 = 4656, pt_2 = 1575 }
