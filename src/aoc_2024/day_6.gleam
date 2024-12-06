@@ -1,6 +1,4 @@
 import gleam/dict
-import gleam/function
-import gleam/io
 import gleam/list
 import gleam/set.{type Set}
 import gleam/string
@@ -98,33 +96,33 @@ fn guard_step(
   }
 }
 
-fn print_grid(
-  grid: dict.Dict(#(Int, Int), String),
-  grid_size: #(Int, Int),
-  visited: set.Set(#(Int, Int)),
-) -> Set(#(Int, Int)) {
-  let #(w, h) = grid_size
+// fn print_grid(
+//   grid: dict.Dict(#(Int, Int), String),
+//   grid_size: #(Int, Int),
+//   visited: set.Set(#(Int, Int)),
+// ) -> Set(#(Int, Int)) {
+//   let #(w, h) = grid_size
 
-  list.range(0, h - 1)
-  |> list.map(fn(row_idx) {
-    list.range(0, w - 1)
-    |> list.map(fn(col_idx) {
-      case grid |> dict.get(#(row_idx, col_idx)) {
-        Error(_) -> panic
-        Ok("#") -> "#"
-        Ok(_) ->
-          case visited |> set.contains(#(row_idx, col_idx)) {
-            False -> "."
-            True -> "X"
-          }
-      }
-    })
-    |> string.concat
-    |> io.debug
-  })
+//   list.range(0, h - 1)
+//   |> list.map(fn(row_idx) {
+//     list.range(0, w - 1)
+//     |> list.map(fn(col_idx) {
+//       case grid |> dict.get(#(row_idx, col_idx)) {
+//         Error(_) -> panic
+//         Ok("#") -> "#"
+//         Ok(_) ->
+//           case visited |> set.contains(#(row_idx, col_idx)) {
+//             False -> "."
+//             True -> "X"
+//           }
+//       }
+//     })
+//     |> string.concat
+//     |> io.debug
+//   })
 
-  visited
-}
+//   visited
+// }
 
 fn guard_turn(g: GuardPosition) {
   GuardPosition(coords: g.coords, facing: turn_90(g.facing))
