@@ -1,4 +1,5 @@
 import gleam/dict
+import gleam/io
 import gleam/list
 import gleam/set.{type Set}
 import gleam/string
@@ -62,6 +63,7 @@ pub fn pt_1(input: List(String)) {
   let #(guard_coords, _) = guard_pos
   let visited =
     guard_step(grid, GuardPosition(guard_coords, Up), #(w, h))
+    |> list.map(fn(x) { x.coords })
     |> set.from_list
   // print_grid(grid, #(w, h), visited)
   visited
@@ -73,22 +75,15 @@ fn guard_step(
   grid: dict.Dict(#(Int, Int), String),
   guard_pos: GuardPosition,
   grid_size: #(Int, Int),
-) -> List(#(Int, Int)) {
+) -> List(GuardPosition) {
   let next_pos = guard_mov(guard_pos)
   case dict.get(grid, next_pos.coords) {
-    Error(_) -> [guard_pos.coords]
+    Error(_) -> [guard_pos]
     Ok(next_tile) -> {
       case next_tile {
-        "." | "^" -> [guard_pos.coords, ..guard_step(grid, next_pos, grid_size)]
+        "." | "^" -> [guard_pos, ..guard_step(grid, next_pos, grid_size)]
         "#" -> {
-          guard_step(
-            grid,
-            GuardPosition(
-              coords: guard_pos.coords,
-              facing: turn_90(guard_pos.facing),
-            ),
-            grid_size,
-          )
+          guard_step(grid, guard_turn(guard_pos), grid_size)
         }
         _ -> panic
       }
@@ -157,6 +152,16 @@ fn guard_step_loop(
   }
 }
 
+fn find_incercepts(
+  coords: Coords,
+  route: List(GuardPosition),
+) -> Result(GuardPosition, Nil) {
+  case list.find(route, fn(x) { x.coords == coords }) {
+    Error(_) -> Error(Nil)
+    Ok(gp) -> Ok(gp)
+  }
+}
+
 pub fn pt_2(input: List(String)) -> Int {
   let h = list.length(input)
   let assert [first_row, ..] = input
@@ -179,18 +184,33 @@ pub fn pt_2(input: List(String)) -> Int {
 
   let dots = grid |> dict.filter(fn(_, v) { v == "." })
 
+  let default_route = guard_step(grid, GuardPosition(guard_coords, Up), #(w, h))
+
   dots
   |> dict.keys
   |> parallel_map.list_pmap(
     fn(new_o) {
-      let new_grid = grid |> dict.insert(new_o, "#")
+      case find_incercepts(new_o, default_route) {
+        Ok(gp) -> {
+          let new_grid = grid |> dict.insert(new_o, "#")
+          let already_visited =
+            default_route
+            |> list.take_while(fn(el) { el != gp })
 
-      guard_step_loop(
-        new_grid,
-        GuardPosition(guard_coords, Up),
-        #(w, h),
-        set.new(),
-      )
+          let assert Ok(gp) = already_visited |> list.last
+          let already_visited =
+            already_visited |> set.from_list |> set.delete(gp)
+          guard_step_loop(
+            new_grid,
+            // GuardPosition(guard_coords, Up),
+            gp,
+            #(w, h),
+            // set.new(),
+            already_visited,
+          )
+        }
+        Error(_) -> False
+      }
     },
     parallel_map.MatchSchedulersOnline,
     1_000_000,
@@ -201,5 +221,6 @@ pub fn pt_2(input: List(String)) -> Int {
       Ok(b) -> b
     }
   })
+  // |> list.filter(fn(x) { x })
   |> list.length
 }
