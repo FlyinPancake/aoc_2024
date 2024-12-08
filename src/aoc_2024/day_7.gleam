@@ -2,7 +2,6 @@ import gleam/int
 import gleam/list
 import gleam/result
 import gleam/string
-import parallel_map
 
 type Input =
   List(Equation)
@@ -10,15 +9,10 @@ type Input =
 type Equation =
   #(Int, List(Int))
 
-type Operator {
-  Add
-  Mul
-  Concat
-}
-
 pub fn parse(input: String) -> Input {
   input
   |> string.split("\n")
+  |> list.filter(fn(el) { !string.is_empty(el) })
   |> list.map(fn(r) {
     let assert [sum, ..rest] = r |> string.split(":")
     let rest =
@@ -40,7 +34,11 @@ pub fn parse(input: String) -> Input {
 
 pub fn pt_1(input: Input) -> Int {
   input
-  |> list.map(fn(el) { #(el, can_be_true(el)) })
+  |> list.map(fn(el) {
+    let #(sum, nums) = el
+    #(sum, list.reverse(nums))
+  })
+  |> list.map(fn(el) { #(el, check_row(el)) })
   |> list.filter_map(fn(el) {
     case el.1 {
       False -> Error(Nil)
@@ -50,34 +48,19 @@ pub fn pt_1(input: Input) -> Int {
   |> int.sum
 }
 
-fn can_be_true(eq: Equation) -> Bool {
+fn check_row(eq: Equation) -> Bool {
   let #(sum, nums) = eq
-  let op_lists = operator_lists(list.length(nums) - 1)
-  op_lists
-  |> list.map(fn(el) {
-    list.map2([Add, ..el], nums, fn(op, num) { #(op, num) })
-    |> list.fold(from: 0, with: fn(acc, el) {
-      let #(op, num) = el
-      case op {
-        Add -> acc + num
-        Mul -> acc * num
-        Concat -> panic as "no concat in pt 1"
-      }
-    })
-  })
-  |> list.contains(sum)
-}
 
-fn operator_lists(len: Int) -> List(List(Operator)) {
-  case len {
-    0 -> []
-    1 -> [[Add], [Mul]]
-    _ -> {
-      let prev =
-        operator_lists(len - 1)
-        |> list.map(fn(el) { [[Add, ..el], [Mul, ..el]] })
-        |> list.flatten
-      prev
+  case nums |> list.is_empty {
+    True -> sum == 0
+    False -> {
+      let assert [num, ..rest] = nums
+      let sub = check_row(#(sum - num, rest))
+      let div = case sum % num == 0 {
+        True -> check_row(#(sum / num, rest))
+        False -> False
+      }
+      sub || div
     }
   }
 }
@@ -85,12 +68,10 @@ fn operator_lists(len: Int) -> List(List(Operator)) {
 pub fn pt_2(input: Input) {
   // [#(7290, [6, 8, 6, 15])]
   input
-  |> parallel_map.list_pmap(
-    fn(el) { #(el, can_be_true2(el)) },
-    parallel_map.MatchSchedulersOnline,
-    1_000_000,
-  )
-  |> list.filter_map(fn(x) { x })
+  |> list.map(fn(el) {
+    let #(res, nums) = el
+    #(el, check_row_concat(#(res, nums |> list.reverse)))
+  })
   |> list.filter_map(fn(el) {
     case el.1 {
       False -> Error(Nil)
@@ -100,36 +81,34 @@ pub fn pt_2(input: Input) {
   |> int.sum
 }
 
-fn can_be_true2(eq: Equation) -> Bool {
-  let #(sum, nums) = eq
-  let op_lists = operator_lists2(list.length(nums) - 1)
-  op_lists
-  |> list.map(fn(el) {
-    list.map2([Add, ..el], nums, fn(op, num) { #(op, num) })
-    |> list.fold(from: 0, with: fn(acc, el) {
-      let #(op, num) = el
-      case op {
-        Add -> acc + num
-        Mul -> acc * num
-        Concat ->
-          int.parse(int.to_string(acc) <> int.to_string(num))
-          |> result.lazy_unwrap(fn() { panic })
-      }
-    })
-  })
-  |> list.contains(sum)
-}
+fn check_row_concat(eq: Equation) -> Bool {
+  let #(res, nums) = eq
 
-fn operator_lists2(len: Int) -> List(List(Operator)) {
-  case len {
-    0 -> []
-    1 -> [[Add], [Mul], [Concat]]
-    _ -> {
-      let prev =
-        operator_lists2(len - 1)
-        |> list.map(fn(el) { [[Add, ..el], [Mul, ..el], [Concat, ..el]] })
-        |> list.flatten
-      prev
+  case list.is_empty(nums) {
+    True -> res == 0
+    False -> {
+      let assert [num, ..rest] = nums
+      let sub = check_row_concat(#(res - num, rest))
+      let div = case res % num {
+        0 -> check_row_concat(#(res / num, rest))
+        _ -> False
+      }
+      let res_str = int.to_string(res)
+      let num_str = int.to_string(num)
+      let concat = case res_str |> string.ends_with(num_str) && res > 0 {
+        True -> {
+          let new_res_str = string.drop_end(res_str, num_str |> string.length)
+          case new_res_str |> string.is_empty {
+            True -> rest == []
+            False -> {
+              let assert Ok(new_res) = new_res_str |> int.parse
+              check_row_concat(#(new_res, rest))
+            }
+          }
+        }
+        False -> False
+      }
+      sub || div || concat
     }
   }
 }
