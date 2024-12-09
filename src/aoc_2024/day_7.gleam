@@ -88,27 +88,39 @@ fn check_row_concat(eq: Equation) -> Bool {
     True -> res == 0
     False -> {
       let assert [num, ..rest] = nums
-      let sub = check_row_concat(#(res - num, rest))
-      let div = case res % num {
-        0 -> check_row_concat(#(res / num, rest))
-        _ -> False
-      }
-      let res_str = int.to_string(res)
-      let num_str = int.to_string(num)
-      let concat = case res_str |> string.ends_with(num_str) && res > 0 {
-        True -> {
-          let new_res_str = string.drop_end(res_str, num_str |> string.length)
-          case new_res_str |> string.is_empty {
-            True -> rest == []
+      case check_row_concat(#(res - num, rest)) {
+        True -> True
+        False -> {
+          let div = case res % num {
+            0 -> check_row_concat(#(res / num, rest))
+            _ -> {
+              False
+            }
+          }
+
+          case div {
+            True -> True
             False -> {
-              let assert Ok(new_res) = new_res_str |> int.parse
-              check_row_concat(#(new_res, rest))
+              let res_str = int.to_string(res)
+              let num_str = int.to_string(num)
+              case res_str |> string.ends_with(num_str) && res > 0 {
+                True -> {
+                  let new_res_str =
+                    string.drop_end(res_str, num_str |> string.length)
+                  case new_res_str |> string.is_empty {
+                    True -> rest == []
+                    False -> {
+                      let assert Ok(new_res) = new_res_str |> int.parse
+                      check_row_concat(#(new_res, rest))
+                    }
+                  }
+                }
+                False -> False
+              }
             }
           }
         }
-        False -> False
       }
-      sub || div || concat
     }
   }
 }
