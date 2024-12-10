@@ -75,8 +75,10 @@ fn defrag(disk: List(BlockContents)) -> List(BlockContents) {
 fn checksum(disk: List(BlockContents)) -> Int {
   disk
   |> list.index_fold(from: 0, with: fn(acc, el, idx) {
-    let assert FileContents(el) = el
-    acc + { el * idx }
+    case el {
+      FileContents(el) -> acc + { el * idx }
+      EmptySpace -> acc
+    }
   })
 }
 
@@ -107,63 +109,72 @@ pub fn pt_2(input: String) {
   print_chunked_disk(disk)
   let defragged =
     disk
+    |> list.reverse
     |> defrag_chunked
+    |> list.reverse
   print_chunked_disk(defragged)
 
   checksum_chunked(defragged)
 }
 
-fn defrag_chunked(disk: ChunkedDisk) -> ChunkedDisk {
-  print_chunked_disk(disk)
-  case disk {
+fn defrag_chunked(disk_rev: ChunkedDisk) -> ChunkedDisk {
+  case disk_rev {
     [] -> []
-    [EmptyChunks(_)] -> []
-    [EmptyChunks(size: empty_size), ..rest] -> {
-      let rrest = rest |> list.reverse
-      let #(no_change, maybe_found) =
-        list.split_while(rrest, fn(el) {
+    [el] -> [el]
+    [FileChunkContents(id: id, size: file_size), ..rest] -> {
+      let rest_correct_ord = rest |> list.reverse
+      let #(front, tail) =
+        list.split_while(rest_correct_ord, fn(el) {
           case el {
-            EmptyChunks(_) -> True
-            FileChunkContents(_, size: size) -> {
-              size >= empty_size
-            }
+            FileChunkContents(_, _) -> True
+            EmptyChunks(space) -> space < file_size
           }
         })
-      let assert [first, ..rest] = case maybe_found |> list.length {
-        0 -> rest
+
+      case tail |> list.length {
+        0 -> [
+          FileChunkContents(id: id, size: file_size),
+          ..defrag_chunked(rest)
+        ]
         _ -> {
-          let assert [FileChunkContents(id: index, size: size), ..mf_rest] =
-            maybe_found
-          let ec_padding = case empty_size - size {
+          let assert [EmptyChunks(empty_chunk_size), ..tail_wo_empty] = tail
+          let rem_space_pad = case empty_chunk_size - file_size {
             0 -> []
             rem -> [EmptyChunks(rem)]
           }
-          [
-            no_change,
-            [EmptyChunks(size)],
-            mf_rest,
-            ec_padding,
-            [FileChunkContents(index, size)],
-          ]
-          |> list.flatten
-          |> list.reverse
+          let result =
+            [
+              front,
+              [FileChunkContents(id: id, size: file_size)],
+              rem_space_pad,
+              tail_wo_empty,
+              [EmptyChunks(file_size)],
+            ]
+            |> list.flatten
+            |> list.reverse
+
+          let assert [new_last, ..new_rest] = result
+          [new_last, ..defrag_chunked(new_rest)]
         }
       }
-
-      [first, ..defrag_chunked(rest)]
     }
-    [first, ..rest] -> [first, ..defrag_chunked(rest)]
+    [EmptyChunks(size: size), ..rest] -> [
+      EmptyChunks(size),
+      ..defrag_chunked(rest)
+    ]
   }
 }
 
 fn checksum_chunked(disk: ChunkedDisk) -> Int {
   disk
-  |> list.index_fold(0, fn(acc, cc, idx) {
-    case cc {
-      FileChunkContents(id, _) -> acc + { id * idx }
-      _ -> acc
+  |> list.flat_map(fn(el) {
+    case el {
+      EmptyChunks(size) -> list.repeat(EmptySpace, size)
+      FileChunkContents(id: id, size: size) ->
+        list.repeat(FileContents(id: id), size)
     }
   })
+  |> checksum
 }
 
 fn print_chunked_disk(l: ChunkedDisk) {
